@@ -8,12 +8,18 @@
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Georgian:wght@400;600;800&display=swap');
       
+      html, body {
+        height: 100%;
+        overflow: hidden; /* Prevent scrollbars globally */
+        overscroll-behavior: none; /* Prevent pull-to-refresh effects */
+      }
+
       body {
         font-family: 'Noto Sans Georgian', sans-serif;
         margin: 0;
-        overflow: hidden; /* Prevent scrollbars */
         background-color: #fdf2f8; /* pink-50 fallback */
         touch-action: manipulation; /* Improves touch response */
+        -webkit-tap-highlight-color: transparent; /* Remove blue highlight on tap */
       }
       
       .heart-beat {
@@ -79,6 +85,15 @@
 
       .animate-pop-in {
         animation: popIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+      }
+      
+      /* Scrollbar hiding for reason container if needed */
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
       }
     </style>
   <script type="importmap">
