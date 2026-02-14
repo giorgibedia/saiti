@@ -10,7 +10,7 @@ const App: React.FC = () => {
   // Ref to track the container to keep the button inside bounds
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Moves the button to a random position (Used for Desktop Hover)
+  // Moves the button to a random position
   const dodgeButton = () => {
     if (isNoVanished) return;
     if (!containerRef.current) return;
@@ -23,8 +23,8 @@ const App: React.FC = () => {
     const buttonWidth = 120;
     const buttonHeight = 60;
     
-    // Calculate safe area (padding from edges)
-    const padding = 20;
+    // Calculate safe area (padding from edges to ensure it doesn't go off screen partially)
+    const padding = 30;
 
     // Generate random position within safe bounds
     const randomX = Math.random() * (viewportWidth - buttonWidth - padding * 2) + padding;
@@ -37,11 +37,21 @@ const App: React.FC = () => {
     setIsAccepted(true);
   };
 
-  const handleNoClick = (e: React.MouseEvent | React.TouchEvent) => {
-    // When clicked/tapped, trigger the fly-off animation
-    e.stopPropagation(); // Prevent bubbling
-    setIsNoVanished(true);
+  const handleNoInteraction = (e: React.MouseEvent | React.TouchEvent) => {
+    // If it's already running away, vanish it on interaction
+    if (noButtonPosition) {
+       e.stopPropagation();
+       setIsNoVanished(true);
+    } else {
+       // First interaction: just dodge
+       dodgeButton();
+    }
   };
+  
+  const handleNoClickForce = (e: React.MouseEvent | React.TouchEvent) => {
+      e.stopPropagation();
+      setIsNoVanished(true);
+  }
 
   return (
     <div className="relative w-full min-h-[100dvh] overflow-hidden flex flex-col items-center justify-center bg-transparent" ref={containerRef}>
@@ -68,16 +78,17 @@ const App: React.FC = () => {
               {/* YES Button */}
               <button
                 onClick={handleYesClick}
-                className={`bg-green-500 hover:bg-green-600 text-white text-lg md:text-xl font-bold py-3 px-6 md:px-10 rounded-full shadow-lg transform transition-all hover:scale-110 active:scale-95 flex items-center gap-2 z-20 ${isNoVanished ? 'scale-110 ring-4 ring-green-200 animate-pulse' : ''}`}
+                className={`bg-green-500 hover:bg-green-600 text-white text-lg md:text-xl font-bold py-3 px-6 md:px-10 rounded-full shadow-lg transform transition-all hover:scale-110 active:scale-95 flex items-center gap-2 z-20 ${isNoVanished ? 'scale-125 ring-4 ring-green-200 animate-pulse' : ''}`}
               >
                 კი <span className="text-2xl">😍</span>
               </button>
 
               {/* NO Button */}
               <button
-                onMouseEnter={dodgeButton} // Desktop: Run away on hover
-                onClick={handleNoClick}    // Mobile/Desktop: Fly away on click
-                className={`bg-red-500 text-white text-lg md:text-xl font-bold py-3 px-6 md:px-10 rounded-full shadow-lg transition-all duration-300 z-30 whitespace-nowrap
+                onMouseEnter={dodgeButton}    // Desktop hover
+                onTouchStart={dodgeButton}    // Mobile touch start (dodges immediately)
+                onClick={handleNoClickForce}  // Last resort: if clicked, vanish
+                className={`bg-red-500 text-white text-lg md:text-xl font-bold py-3 px-6 md:px-10 rounded-full shadow-lg transition-all duration-300 z-30 whitespace-nowrap select-none
                   ${noButtonPosition && !isNoVanished ? 'fixed transition-all duration-200 ease-out' : 'relative'} 
                   ${isNoVanished ? 'animate-fly-off fixed' : ''}
                 `}
