@@ -1,57 +1,102 @@
 import React, { useState, useRef } from 'react';
 import { FloatingHearts } from './components/FloatingHearts';
 import { Heart, Stars } from 'lucide-react';
+import confetti from 'canvas-confetti';
 
 const App: React.FC = () => {
   const [isAccepted, setIsAccepted] = useState(false);
   const [noButtonPosition, setNoButtonPosition] = useState<{ top: number; left: number } | null>(null);
-  const [isNoVanished, setIsNoVanished] = useState(false);
+  const [noCount, setNoCount] = useState(0);
   
-  // Ref to track the container to keep the button inside bounds
   const containerRef = useRef<HTMLDivElement>(null);
+  const noButtonRef = useRef<HTMLButtonElement>(null);
 
-  // Moves the button to a random position
+  // Phrases that appear on the "No" button sequentially
+  const phrases = [
+    "არა 😒",
+    "დაფიქრდი... 🤔",
+    "ნუთუ? 🥺",
+    "გული მატკინო? 💔",
+    "შანსი არაა! 😤",
+    "კარგი რა... 😭",
+    "მომკლავ... ☠️",
+    "გთხოოოოვ! 🙏",
+    "სხვა გზა არაა! 😡",
+    "მაინც კი-ს დააჭერ! 😎"
+  ];
+
+  const getNoButtonText = () => {
+    return phrases[Math.min(noCount, phrases.length - 1)];
+  };
+
+  const triggerConfetti = () => {
+    const duration = 3000;
+    const end = Date.now() + duration;
+
+    const frame = () => {
+      confetti({
+        particleCount: 5,
+        angle: 60,
+        spread: 55,
+        origin: { x: 0 },
+        colors: ['#ff0000', '#ffa500', '#ff69b4']
+      });
+      confetti({
+        particleCount: 5,
+        angle: 120,
+        spread: 55,
+        origin: { x: 1 },
+        colors: ['#ff0000', '#ffa500', '#ff69b4']
+      });
+
+      if (Date.now() < end) {
+        requestAnimationFrame(frame);
+      }
+    };
+
+    frame();
+  };
+
   const dodgeButton = () => {
-    if (isNoVanished) return;
     if (!containerRef.current) return;
 
-    // Get viewport dimensions
+    // Increment count to grow the YES button
+    setNoCount(prev => prev + 1);
+
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
     
-    // Button dimensions (safe estimate)
-    const buttonWidth = 120;
-    const buttonHeight = 60;
-    
-    // Calculate safe area (padding from edges to ensure it doesn't go off screen partially)
-    const padding = 30;
+    // Better estimation of button size + safety margin
+    // We use larger values to ensure it definitely stays on screen
+    const buttonWidth = 220; 
+    const buttonHeight = 100; 
+    const padding = 20;
 
-    // Generate random position within safe bounds
-    const randomX = Math.random() * (viewportWidth - buttonWidth - padding * 2) + padding;
-    const randomY = Math.random() * (viewportHeight - buttonHeight - padding * 2) + padding;
+    // Calculate max allowed positions
+    // Math.max(0, ...) ensures we don't get negative values on very small screens
+    const maxLeft = Math.max(0, viewportWidth - buttonWidth - padding);
+    const maxTop = Math.max(0, viewportHeight - buttonHeight - padding);
+
+    const randomX = Math.max(padding, Math.random() * maxLeft);
+    const randomY = Math.max(padding, Math.random() * maxTop);
 
     setNoButtonPosition({ top: randomY, left: randomX });
   };
 
   const handleYesClick = () => {
     setIsAccepted(true);
-  };
-
-  const handleNoInteraction = (e: React.MouseEvent | React.TouchEvent) => {
-    // If it's already running away, vanish it on interaction
-    if (noButtonPosition) {
-       e.stopPropagation();
-       setIsNoVanished(true);
-    } else {
-       // First interaction: just dodge
-       dodgeButton();
-    }
+    triggerConfetti();
   };
   
   const handleNoClickForce = (e: React.MouseEvent | React.TouchEvent) => {
       e.stopPropagation();
-      setIsNoVanished(true);
+      setNoCount(prev => prev + 1);
+      dodgeButton();
   }
+
+  // Calculate Yes Button Scale
+  // Starts at 1, increases by 0.15 for every "No" attempt
+  const yesButtonScale = 1 + (noCount * 0.15);
 
   return (
     <div className="relative w-full min-h-[100dvh] overflow-hidden flex flex-col items-center justify-center bg-transparent" ref={containerRef}>
@@ -74,31 +119,38 @@ const App: React.FC = () => {
               <span className="text-pink-600 drop-shadow-sm">იქნები ჩემი ვალენტინი?</span>
             </h1>
 
-            <div className="flex flex-row justify-center items-center gap-4 md:gap-8 h-24 relative">
+            <div className="flex flex-row justify-center items-center gap-4 relative min-h-[100px]">
               {/* YES Button */}
               <button
                 onClick={handleYesClick}
-                className={`bg-green-500 hover:bg-green-600 text-white text-lg md:text-xl font-bold py-3 px-6 md:px-10 rounded-full shadow-lg transform transition-all hover:scale-110 active:scale-95 flex items-center gap-2 z-20 ${isNoVanished ? 'scale-125 ring-4 ring-green-200 animate-pulse' : ''}`}
+                style={{ 
+                    transform: `scale(${yesButtonScale})`,
+                    transformOrigin: 'center',
+                    zIndex: yesButtonScale > 2 ? 100 : 20 
+                }}
+                className={`bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-200 flex items-center gap-2 whitespace-nowrap
+                    ${yesButtonScale > 3 ? 'text-4xl px-12 py-6 ring-8 ring-green-300' : 'text-xl'}
+                `}
               >
                 კი <span className="text-2xl">😍</span>
               </button>
 
               {/* NO Button */}
               <button
-                onMouseEnter={dodgeButton}    // Desktop hover
-                onTouchStart={dodgeButton}    // Mobile touch start (dodges immediately)
-                onClick={handleNoClickForce}  // Last resort: if clicked, vanish
-                className={`bg-red-500 text-white text-lg md:text-xl font-bold py-3 px-6 md:px-10 rounded-full shadow-lg transition-all duration-300 z-30 whitespace-nowrap select-none
-                  ${noButtonPosition && !isNoVanished ? 'fixed transition-all duration-200 ease-out' : 'relative'} 
-                  ${isNoVanished ? 'animate-fly-off fixed' : ''}
+                ref={noButtonRef}
+                onMouseEnter={dodgeButton}
+                onTouchStart={dodgeButton}
+                onClick={handleNoClickForce}
+                className={`bg-red-500 text-white text-lg md:text-xl font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300 z-30 whitespace-nowrap select-none max-w-[90vw] overflow-hidden text-ellipsis
+                  ${noButtonPosition ? 'fixed transition-all duration-200 ease-out' : 'relative'} 
                 `}
                 style={
-                  noButtonPosition && !isNoVanished
+                  noButtonPosition
                     ? { top: noButtonPosition.top, left: noButtonPosition.left }
-                    : isNoVanished && noButtonPosition ? { top: noButtonPosition.top, left: noButtonPosition.left } : {}
+                    : {}
                 }
               >
-                არა 😒
+                {getNoButtonText()}
               </button>
             </div>
             
